@@ -1,12 +1,15 @@
 const Discord = require('discord.js');
 const Moment = require('moment');
+const QuickChart = require('quickchart-js');
 const client = new Discord.Client();
 
 const TrackedWords = require('./TrackedWords');
+const WordCounts = require('./WordCounts');
 
 client.on('ready', async () => {
     client.user.setActivity('!help');
     await TrackedWords.connect();
+    await WordCounts.connect();
     await console.log('ready!');
 });
 
@@ -15,6 +18,12 @@ const getErrorEmbed = (desc) => {
         .setColor('#E85959')
         .setTitle('Error!')
         .setDescription(desc);
+}
+
+const getResultEmbed = (desc) => {
+    return new Discord.MessageEmbed()
+    .setColor('#F6FD85')
+    .setTitle(desc)
 }
 
 client.on('message', async (msg) => {
@@ -74,15 +83,39 @@ client.on('message', async (msg) => {
                 console.log(e);
             }
         }
-    }
 
-    //text tracking
-    let res = await TrackedWords.dbGet(msg.guild.id, null, msg.author.id);
-    res.forEach((tracker) => {
-        if (msg.content.includes(tracker.word)) {
-            //insert into db
+        if (cmd === "count") {
+            let user = fullCmd[1].replace("<@!","").replace(">","");
+            let word = fullCmd[2];
+            let tracker = await TrackedWords.dbGet(msg.guild.id, word, user);
+
+            if (!tracker[0]) {
+                await msg.channel.send({
+                    embed: getErrorEmbed('Could not find the requested tracker. Make sure you are using the format `!count <user> <word>`')
+                });
+            } else {
+                let res = await WordCounts.dbCount(tracker[0]._id);
+                await msg.channel.send({
+                    embed: getResultEmbed(`${word} count for ${fullCmd[1]} is ${res}.`)
+                });
+            }
         }
-    });
+
+        if (cmd === "graph") {
+
+        }
+
+    } else {
+        //text tracking (not a command)
+        let res = await TrackedWords.dbGet(msg.guild.id, null, msg.author.id);
+        res.forEach((tracker) => {
+            if (msg.content.includes(tracker.word)) {
+                //insert into db
+                let success = WordCounts.dbUpsert(tracker._id, new Date());
+                //console.log(success);
+            }
+        });
+    }
 });
 
 process.on('exit', () => {
