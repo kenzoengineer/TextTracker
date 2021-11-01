@@ -5,6 +5,7 @@ const client = new Discord.Client();
 
 const TrackedWords = require('./TrackedWords');
 const WordCounts = require('./WordCounts');
+const Embeds = require('./Embeds');
 
 client.on('ready', async () => {
     client.user.setActivity('!help');
@@ -12,19 +13,6 @@ client.on('ready', async () => {
     await WordCounts.connect();
     await console.log('ready!');
 });
-
-const getErrorEmbed = (desc) => {
-    return new Discord.MessageEmbed()
-        .setColor('#E85959')
-        .setTitle('Error!')
-        .setDescription(desc);
-}
-
-const getResultEmbed = (desc) => {
-    return new Discord.MessageEmbed()
-    .setColor('#F6FD85')
-    .setTitle(desc)
-}
 
 client.on('message', async (msg) => {
     if (msg.content.startsWith('!')) { //prefix
@@ -34,7 +22,7 @@ client.on('message', async (msg) => {
         if (cmd === "add") {
             if (fullCmd.length < 3) {
                 await msg.channel.send({
-                    embed: getErrorEmbed('Not enough arguments. Please use: `!add <user> <word>`')
+                    embed: Embeds.getErrorEmbed('Not enough arguments. Please use: `!add <user> <word>`')
                 });
                 return;
             }
@@ -43,9 +31,13 @@ client.on('message', async (msg) => {
             try {
                 let result = await TrackedWords.dbInsert(msg.guild.id,word,user);
                 if (result) {
-                    await msg.channel.send("Success.");
+                    await msg.channel.send({
+                        embed: Embeds.getSuccessEmbed(`Successfully addded ${word}.`)
+                    });
                 } else {
-                    await msg.channel.send("Entry already exists.");
+                    await msg.channel.send({
+                        embed: Embends.getErrorEmbed(`${word} is already being tracked.`)
+                    });
                 }
                 
             } catch (e) {
@@ -53,7 +45,7 @@ client.on('message', async (msg) => {
             }
         }
 
-        if (cmd === "get") {
+        if (cmd === "list") {
             let res = await TrackedWords.dbGet(msg.guild.id);
             let words = res.map(x => x.word).join("\n");
             let users = res.map(x => client.users.cache.find(y => y.id = x.user_id)).join("\n");
@@ -70,7 +62,7 @@ client.on('message', async (msg) => {
         if (cmd === "remove") {
             if (fullCmd.length < 3) {
                 await msg.channel.send({
-                    embed: getErrorEmbed('Not enough arguments. Please use: `!remove <user> <word>`')
+                    embed: Embeds.getErrorEmbed('Not enough arguments. Please use: `!remove <user> <word>`')
                 });
                 return;
             }
@@ -78,7 +70,11 @@ client.on('message', async (msg) => {
             let word = fullCmd[2];
             try {
                 let res = await TrackedWords.dbDelete(msg.guild.id, word, user);
-                await msg.channel.send(res ? "Success." : "Failed.");
+                await msg.channel.send(res ? {
+                    embed: Embeds.getSuccessEmbed(`Removed ${word}`)
+                } : {
+                    embed: Embeds.getErrorEmbed('Tracker does not exist.')
+                });
             } catch (e) {
                 console.log(e);
             }
@@ -91,12 +87,12 @@ client.on('message', async (msg) => {
 
             if (!tracker[0]) {
                 await msg.channel.send({
-                    embed: getErrorEmbed('Could not find the requested tracker. Make sure you are using the format `!count <user> <word>`')
+                    embed: Embeds.getErrorEmbed('Could not find the requested tracker. Make sure you are using the format `!count <user> <word>`')
                 });
             } else {
                 let res = await WordCounts.dbCount(tracker[0]._id);
                 await msg.channel.send({
-                    embed: getResultEmbed(`${word} count for ${fullCmd[1]} is ${res}.`)
+                    embed: Embeds.getResultEmbed(`${word} count for ${fullCmd[1]} is ${res}.`)
                 });
             }
         }
@@ -108,7 +104,7 @@ client.on('message', async (msg) => {
 
             if (!tracker[0]) {
                 await msg.channel.send({
-                    embed: getErrorEmbed('Could not find the requested tracker. Make sure you are using the format `!chart <user> <word>`')
+                    embed: Embeds.getErrorEmbed('Could not find the requested tracker. Make sure you are using the format `!chart <user> <word>`')
                 });
             } else {
                 const myChart = new QuickChart();
@@ -116,7 +112,7 @@ client.on('message', async (msg) => {
                 let _data = [];
                 for (let i = 0; i < 5; i++) {
                     let d = Moment().subtract(i,'days');
-                    _dates.unshift(d.format("YYYY-MM-DD"));
+                    _dates.unshift(d.format("MMM DD"));
                     let res = await WordCounts.dbCount(tracker[0]._id, d);
                     _data.unshift(res);
                 }
@@ -124,7 +120,14 @@ client.on('message', async (msg) => {
                 console.log(_data);
                 myChart.setConfig({
                     type: 'line',
-                    data: {labels: _dates, datasets: [{label: 'Count',data: _data}]}
+                    data: {labels: _dates, datasets: [{label: 'Count',data: _data}]},
+                    options: {
+                        scales: {
+                            y: {
+                                min: 0
+                            }
+                        }
+                    }
                 });
                 await msg.channel.send(myChart.getUrl());
             }
