@@ -6,7 +6,9 @@ const trackerDb = "TextTracker";
 const wordsCollection = "TrackedWords";
 const client = new Discord.Client();
 const uri = `mongodb+srv://replit-user-01:${process.env['password']}@mybotcluster.mbqon.mongodb.net/TextTracker?retryWrites=true&w=majority`;
+
 const mongoClient = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const colWords = mongoClient.db(trackerDb).collection(wordsCollection);
 
 client.on('ready', async () => {
     client.user.setActivity('!help');
@@ -26,26 +28,21 @@ const dbInsert = async (_guild, _word, _user) => {
     if (findResults.length > 0) {
         return false;
     }
-    const col = mongoClient.db(trackerDb).collection(wordsCollection);
-    await col.insertOne({guild_id: _guild,word: _word,user_id: _user});
+    await colWords.insertOne({guild_id: _guild,word: _word,user_id: _user});
     return true;
 }
 
 const dbGet = async (_guild, _word, _user) => {
-    const col = mongoClient.db(trackerDb).collection(wordsCollection);
-    let res = await col.find({guild_id: _guild, word: _word, user_id: _user}).toArray();
-    return res;
-}
-
-const dbGetAll = async (_guild) => {
-    const col = mongoClient.db(trackerDb).collection(wordsCollection);
-    let res = await col.find({guild_id: _guild}).toArray();
+    let criteria = {};
+    if (_guild) criteria.guild_id = _guild;
+    if (_word) criteria.word = _word;
+    if (_user) criteria.user_id = _user;
+    let res = await colWords.find(criteria).toArray();
     return res;
 }
 
 const dbDelete = async (_guild, _word, _user) => {
-    const col = mongoClient.db(trackerDb).collection(wordsCollection);
-    await col.deleteOne({guild_id: _guild, word: _word, user_id: _user});
+    await colWords.deleteOne({guild_id: _guild, word: _word, user_id: _user});
 }
 
 client.on('message', async (msg) => {
@@ -76,7 +73,7 @@ client.on('message', async (msg) => {
         }
 
         if (cmd === "get") {
-            let res = await dbGetAll(msg.guild.id);
+            let res = await dbGet(msg.guild.id);
             let words = res.map(x => x.word).join("\n");
             let users = res.map(x => client.users.cache.find(y => y.id = x.user_id)).join("\n");
             const embed = new Discord.MessageEmbed()
@@ -110,6 +107,14 @@ client.on('message', async (msg) => {
             mongoClient.close();
         }
     }
+
+    //text tracking
+    let res = await dbGet(msg.guild.id, null, msg.author.id);
+    res.forEach((tracker) => {
+        if (msg.content.includes(tracker.word)) {
+            console.log(msg.content);
+        }
+    });
 });
 
 process.on('exit', () => {
