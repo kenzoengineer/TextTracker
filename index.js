@@ -1,18 +1,12 @@
 const Discord = require('discord.js');
 const Moment = require('moment');
-const { MongoClient } = require('mongodb');
-
-const trackerDb = "TextTracker";
-const wordsCollection = "TrackedWords";
 const client = new Discord.Client();
-const uri = `mongodb+srv://replit-user-01:${process.env['password']}@mybotcluster.mbqon.mongodb.net/TextTracker?retryWrites=true&w=majority`;
 
-const mongoClient = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-const colWords = mongoClient.db(trackerDb).collection(wordsCollection);
+const TrackedWords = require('./TrackedWords');
 
 client.on('ready', async () => {
     client.user.setActivity('!help');
-    await mongoClient.connect();
+    await TrackedWords.connect();
     await console.log('ready!');
 });
 
@@ -21,28 +15,6 @@ const getErrorEmbed = (desc) => {
         .setColor('#E85959')
         .setTitle('Error!')
         .setDescription(desc);
-}
-
-const dbInsert = async (_guild, _word, _user) => {
-    let findResults = await dbGet(_guild, _word, _user);
-    if (findResults.length > 0) {
-        return false;
-    }
-    await colWords.insertOne({guild_id: _guild,word: _word,user_id: _user});
-    return true;
-}
-
-const dbGet = async (_guild, _word, _user) => {
-    let criteria = {};
-    if (_guild) criteria.guild_id = _guild;
-    if (_word) criteria.word = _word;
-    if (_user) criteria.user_id = _user;
-    let res = await colWords.find(criteria).toArray();
-    return res;
-}
-
-const dbDelete = async (_guild, _word, _user) => {
-    await colWords.deleteOne({guild_id: _guild, word: _word, user_id: _user});
 }
 
 client.on('message', async (msg) => {
@@ -60,7 +32,7 @@ client.on('message', async (msg) => {
             let user = fullCmd[1].replace("<@!","").replace(">","");
             let word = fullCmd[2];
             try {
-                let result = await dbInsert(msg.guild.id,word,user);
+                let result = await TrackedWords.dbInsert(msg.guild.id,word,user);
                 if (result) {
                     await msg.channel.send("Success.");
                 } else {
@@ -73,7 +45,7 @@ client.on('message', async (msg) => {
         }
 
         if (cmd === "get") {
-            let res = await dbGet(msg.guild.id);
+            let res = await TrackedWords.dbGet(msg.guild.id);
             let words = res.map(x => x.word).join("\n");
             let users = res.map(x => client.users.cache.find(y => y.id = x.user_id)).join("\n");
             const embed = new Discord.MessageEmbed()
@@ -96,29 +68,24 @@ client.on('message', async (msg) => {
             let user = fullCmd[1].replace("<@!","").replace(">","");
             let word = fullCmd[2];
             try {
-                await dbDelete(msg.guild.id, word, user);
-                await msg.channel.send("Success.");
+                let res = await TrackedWords.dbDelete(msg.guild.id, word, user);
+                await msg.channel.send(res ? "Success." : "Failed.");
             } catch (e) {
                 console.log(e);
             }
         }
-        
-        if (cmd === "close") {
-            mongoClient.close();
-        }
     }
 
     //text tracking
-    let res = await dbGet(msg.guild.id, null, msg.author.id);
+    let res = await TrackedWords.dbGet(msg.guild.id, null, msg.author.id);
     res.forEach((tracker) => {
         if (msg.content.includes(tracker.word)) {
-            console.log(msg.content);
+            //insert into db
         }
     });
 });
 
 process.on('exit', () => {
-    mongoClient.close();
     console.log('exiting...');
 });
 
