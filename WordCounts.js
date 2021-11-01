@@ -31,6 +31,6 @@ const self = module.exports = {
         let criteria = {tracker_id: _id};
         if (_date) criteria.date = Moment(_date).format('YYYY-MM-DD');
         let res = await col.find(criteria).toArray();
-        return res.map(a => a.count).reduce((x,y) => x + y );
+        return res.length < 1 ? 0 : res.map(a => a.count).reduce((x,y) => x + y );
     }
 }

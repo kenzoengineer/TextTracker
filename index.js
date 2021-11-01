@@ -101,8 +101,33 @@ client.on('message', async (msg) => {
             }
         }
 
-        if (cmd === "graph") {
+        if (cmd === "chart") {
+            let user = fullCmd[1].replace("<@!","").replace(">","");
+            let word = fullCmd[2];
+            let tracker = await TrackedWords.dbGet(msg.guild.id, word, user);
 
+            if (!tracker[0]) {
+                await msg.channel.send({
+                    embed: getErrorEmbed('Could not find the requested tracker. Make sure you are using the format `!chart <user> <word>`')
+                });
+            } else {
+                const myChart = new QuickChart();
+                let _dates = [];
+                let _data = [];
+                for (let i = 0; i < 5; i++) {
+                    let d = Moment().subtract(i,'days');
+                    _dates.unshift(d.format("YYYY-MM-DD"));
+                    let res = await WordCounts.dbCount(tracker[0]._id, d);
+                    _data.unshift(res);
+                }
+                console.log(_dates);
+                console.log(_data);
+                myChart.setConfig({
+                    type: 'line',
+                    data: {labels: _dates, datasets: [{label: 'Count',data: _data}]}
+                });
+                await msg.channel.send(myChart.getUrl());
+            }
         }
 
     } else {
