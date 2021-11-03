@@ -35,6 +35,15 @@ Plots the occurances of words over a period of 5 days
 
 Custom command wrapper for count
 
+`!compare <user1> <word1> <user2> <word2> ...`
+
+Compare the counts of multiple tracked words
+
+## Next steps
+- Remake it in typescript
+- Use js object schemas instead of raw querying
+- Use the new discord slash commands rather than prefixing
+
 ## Privacy Policy
 This bot does not store messages, user information or server information. However, some information is stored to facilitate the permanent storage of word counts. Only information about tracked users are stored.
 
