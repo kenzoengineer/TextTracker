@@ -14,8 +14,14 @@ const self = module.exports = {
     },
     getSuccessEmbed: (desc) => {
         return new Discord.MessageEmbed()
-        .setColor('##71E465')
+        .setColor('#71E465')
         .setTitle('Success.')
+        .setDescription(desc)
+    },
+    getHelpEmbed: (desc) => {
+        return new Discord.MessageEmbed()
+        .setColor('#7582DF')
+        .setTitle('Command List:')
         .setDescription(desc)
     }
 }

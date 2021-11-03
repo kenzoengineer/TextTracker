@@ -92,7 +92,7 @@ client.on('message', async (msg) => {
             } else {
                 let res = await WordCounts.dbCount(tracker[0]._id);
                 await msg.channel.send({
-                    embed: Embeds.getResultEmbed(`${word} count for ${fullCmd[1]} is ${res}.`)
+                    embed: Embeds.getResultEmbed(`${msg.guild.member(user).nickname} has said ${word} ${res} times.`)
                 });
             }
         }
@@ -120,7 +120,7 @@ client.on('message', async (msg) => {
                 console.log(_data);
                 myChart.setConfig({
                     type: 'line',
-                    data: {labels: _dates, datasets: [{label: 'Count',data: _data}]},
+                    data: {labels: _dates, datasets: [{label: `${word}`,data: _data, lineTension: 0.4}]},
                     options: {
                         scales: {
                             y: {
@@ -133,12 +133,30 @@ client.on('message', async (msg) => {
             }
         }
 
+        if (cmd === "help") {
+            await msg.channel.send({
+                embed: Embeds.getHelpEmbed(
+                "`!add <user> <word>`\n"+
+                "Adds a word to be tracked\n\n"+
+                "`!list`\n"+
+                "Lists all tracked words\n\n"+
+                "`!remove <user> <word>`\n"+
+                "Removes a currently tracked word\n\n"+
+                "`!count <user> <word>`\n"+
+                "Gets the amount of times the word has been said\n\n"+
+                "`!chart <user> <word>`\n"+
+                "Plots the occurances of words over a period of 5 days"
+                )
+            });
+        }
+
     } else {
         //text tracking (not a command)
         let res = await TrackedWords.dbGet(msg.guild.id, null, msg.author.id);
         res.forEach((tracker) => {
             if (msg.content.includes(tracker.word)) {
                 //insert into db
+                console.log(new Date());
                 let success = WordCounts.dbUpsert(tracker._id, new Date());
                 //console.log(success);
             }

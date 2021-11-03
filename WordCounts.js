@@ -19,9 +19,10 @@ const self = module.exports = {
     dbUpsert: async (_id, _date) => {
         //update OR insert actually
         let formatted_date = Moment(_date).format('YYYY-MM-DD');
+        console.log(formatted_date);
         let count = await col.countDocuments({tracker_id : _id, date: formatted_date});
         if (count > 0) {
-            let res = await col.updateOne({tracker_id: _id}, {$inc: {count: 1}});
+            let res = await col.updateOne({tracker_id: _id, date: formatted_date}, {$inc: {count: 1}});
             return res;
         }
         let res = await col.insertOne({tracker_id: _id, count: 1, date: formatted_date});
