@@ -1,6 +1,7 @@
 const Discord = require('discord.js');
 const Moment = require('moment');
 const QuickChart = require('quickchart-js');
+const keep_alive = require('./alive.js');
 const client = new Discord.Client();
 
 const TrackedWords = require('./TrackedWords');
@@ -149,7 +150,6 @@ client.on('message', async (msg) => {
                 )
             });
         }
-
     } else {
         //text tracking (not a command)
         let res = await TrackedWords.dbGet(msg.guild.id, null, msg.author.id);
